@@ -1,5 +1,6 @@
 (ns enterlab.mather.core
-  (:require [clojure.edn :as edn])
+  (:require [clojure.edn :as edn]
+            [enterlab.mather.i18n :refer [txt]])
   (:import java.util.Date
            java.text.SimpleDateFormat))
 
@@ -22,22 +23,20 @@
             (str updated-results)
             :append false)))
 
-(defn question [a b]
-  (println (format "Hvad er %d gange %d?" a b))
-  (flush)
+(defn question [a b lang]
+  (println (format (txt lang :question-add-2) a b))
   (let [answer (read-line)
         number-answer (edn/read-string answer)
         correct-answer (* a b)]
-    (flush)
     (if (= number-answer correct-answer)
       (do
-        (println "Korrekt!")
+        (println (txt lang :answer-correct))
         true)
       (do
-        (println (format "Forkert, det er %d" correct-answer))
+        (println (format (txt lang :answer-wrong) correct-answer))
         false))))
 
-(defn start-quiz [min max n correct]
+(defn start-quiz [min max n correct lang]
       (if (= 0 n)
         (fn [start]
           (let [end (System/currentTimeMillis)
@@ -55,27 +54,42 @@
           (recur
             min max
             (dec n)
-            (if (question a b)
+            (if (question a b lang)
               (inc correct)
-              correct)))))
+              correct)
+            lang))))
 
-(defn quiz [user min-int max-int questions]
-  (println (format "\n===== gang tal mellem %d og %d (%d repetitioner) =====" min-int max-int questions))
-  (let [start-millis (System/currentTimeMillis)
-        results (read-results user)
+(defn quiz [user min-int max-int questions lang] ;; Refactor this
+  (println (format (txt lang :quiz-headline)
+                   min-int max-int questions))
+  (let [results (read-results user)
         {:keys [best trials]} (stats results min-int max-int)
-        _ (println (format "  - Forsøgt %d gange før" trials))
+        _ (println (format (txt lang :quiz-tried-times-before)
+                           trials))
         _ (when best
-            (println (format "  - Din rekord på %.1f s/korrekt svar er fra %s\n=====" (* 1.0 (last best)) (.format (SimpleDateFormat. "yyyy-MM-dd") (first best)))))
-        result ((start-quiz min-int max-int questions 0) start-millis)
+            (println (format (txt lang :quiz-current-best)
+                             (* 1.0 (last best))
+                             (.format
+                              (SimpleDateFormat. (txt lang :date-format))
+                              (first best)))))
+        _ (println (txt lang :quiz-start-when-ready))
+        _ (read-line)
+        start-millis (System/currentTimeMillis)
+        result ((start-quiz min-int max-int questions 0 lang) start-millis)
         {:keys [correct seconds secs-per-correct]} result]
-    (write-result user results [min-int max-int] [questions correct seconds (if (> secs-per-correct 0) secs-per-correct -1)])
-    (println (format "RESULTAT:\n Du har %d korrekte og %d forkerte svar.\n Det tog dig %d sekunder at svare.\n Det er ca. %s sekunder pr. korrekt svar."
+    (write-result user results ;; Too many input. Use result as input, assoc'ed with additional data
+                  [min-int max-int]
+                  [questions correct seconds (if (> secs-per-correct 0)
+                                              secs-per-correct
+                                              999999)]) ;; Obviously wrong
+    (println (format (txt lang :quiz-result)
                 correct
                 (- questions correct)
                 seconds
                 (if (> secs-per-correct 0)
                   (format "%.1f" (* 1.0 secs-per-correct))
-                  "UENDELIGT MANGE")))
+                  (txt lang :quiz-result-infinity))))
+    ;; When PB, print extra line!
     (when (and best (< secs-per-correct (last best)))
-      (println (format " *** TILLYKKE, du har slået din rekord med %.1f sekunder pr. korrekt svar!! :-) ***" (* 1.0 (- (last best) secs-per-correct)))))))
+      (println (format (txt lang :quiz-personal-best)
+                       (* 1.0 (- (last best) secs-per-correct)))))))
