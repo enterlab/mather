@@ -24,7 +24,8 @@
             :append false)))
 
 (defn question [a b lang]
-  (println (format (txt lang :question-add-2) a b))
+  (print (format (txt lang :question-add-2) a b))
+  (flush)
   (let [answer (read-line)
         number-answer (edn/read-string answer)
         correct-answer (* a b)]
@@ -87,7 +88,7 @@
                 (- questions correct)
                 seconds
                 (if (> secs-per-correct 0)
-                  (format "%.1f" (* 1.0 secs-per-correct))
+                  (format "%.2f" (* 1.0 secs-per-correct))
                   (txt lang :quiz-result-infinity))))
     ;; When PB, print extra line!
     (when (and best (< secs-per-correct (last best)))
