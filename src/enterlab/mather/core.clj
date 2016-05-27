@@ -91,6 +91,6 @@
                   (format "%.2f" (* 1.0 secs-per-correct))
                   (txt lang :quiz-result-infinity))))
     ;; When PB, print extra line!
-    (when (and best (< secs-per-correct (last best)))
+    (when (and best (not= 0 secs-per-correct) (< secs-per-correct (last best)))
       (println (format (txt lang :quiz-personal-best)
                        (* 1.0 (- (last best) secs-per-correct)))))))
